@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DuckWriter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tiny.cloud/1/jan4l3rg06u6jg4gzqgvcqxytuissp09o7wfxde4axienbj7/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        /* --- 1. Global Styles & Theme Variables --- */
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #2d2d2d;
+            --bg-tertiary: #3c3c3c;
+            --text-primary: #d4d4d4;
+            --text-secondary: #a0a0a0;
+            --accent-primary: #2ca9bc;
+            --accent-text: #ffffff;
+            --border-radius: 4px;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-family: 'Georgia', serif;
+            overflow: hidden; /* Prevent double scrollbars */
+        }
+
+        /* Set a larger base font-size to scale the entire UI */
+        body {
+            font-size: 1.2em;
+        }
+
+        /* --- 2. Main Layout Containers --- */
+  #app-container {
+    display: flex;
+    height: 100vh;
+    box-sizing: border-box; /* Ensures the border is included in the height */
+    border-top: 10px solid #2D2D2D; /* Creates the top bezel */
+	    border-bottom: 10px solid #2D2D2D; /* Creates the top bezel */
+	
+
+
+}
+
+        /* Left sidebar for chapter navigation */
+        #sidebar {
+            width: 280px;
+            border-right: 1px solid var(--bg-tertiary);
+            background-color: var(--bg-secondary);
+            padding: 2px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        
+        /* Main content area holding the editor and its toolbar */
+        #main-content {
+            flex: 0 0 52rem; /* Fixed width, does not grow or shrink */
+            min-width: 0;
+             padding: 12px 12px 12px 12px; /* Top, Right, Bottom, Left */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+
+        }
+
+        /* Right sidebar for tools and settings */
+        #right-sidebar {
+            flex: 1; /* Allows this sidebar to grow and fill remaining space */
+            min-width: 320px;
+            border-left: 1px solid var(--bg-tertiary);
+
+            background-color: var(--bg-secondary);
+            padding: 12px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+       
+        }
+
+        /* --- 3. Sidebar Elements (Chapters & Tools) --- */
+		/* Style for the editable project title in the left sidebar */
+		#chapters-title {
+			text-align: right;
+			 padding: 6px;
+			margin: 0 10px 10px 0; /* Top, Right, Bottom, Left */
+			font-weight: 500;
+			color: var(--text-secondary);
+			font-size: 1.5rem;
+			outline: none;
+			        border-bottom: 3px solid var(--bg-tertiary);
+			user-select: none;
+		}
+
+		/* Style for the tool titles in the right sidebar */
+		#right-sidebar h3 {
+			margin: 0 0 10px 5px;   /* Top, Right, Bottom, Left */
+			font-weight: 500;
+			color: var(--text-secondary);
+			font-size: 1.1rem;
+		}
+        
+        #tab-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 5px; /* Space for scrollbar */
+        }
+
+        /* Individual chapter tab item */
+        .tab {
+            padding: 12px 16px;
+            border-bottom: 2px solid var(--bg-tertiary);
+		
+            border-radius: var(--border-radius);
+            margin-bottom: 5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1rem;
+            user-select: none;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .tab:hover {
+            background-color: var(--bg-tertiary);
+        }
+
+        .tab.active {
+            background-color: var(--bg-tertiary);
+            color: var(--accent-text);
+            font-weight: 500;
+        }
+
+        /* Chapter name text within a tab */
+        .tab-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            outline: none;
+        }
+        
+        /* Style for when a chapter name is being edited */
+        .tab-name[contenteditable="true"] {
+            background-color: var(--bg-primary);
+            padding: 2px 4px; 
+            border-radius: var(--border-radius);
+            cursor: text;
+        }
+
+        
+        
+        /* The 'x' close button on a tab */
+        .tab-close {
+            margin-right: 10px;
+            padding: 2px 6px;
+            border-radius: 50%;
+            color: transparent; /* Hidden by default, appears on hover */
+            transition: color 0.15s ease-in-out;
+        }
+
+        .tab:hover .tab-close {
+            color: var(--text-primary);
+        }
+
+        .tab .tab-close:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Decorative SVG container in the right sidebar */
+        #deco-container {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+        }
+        
+        #deco-svg {
+            width: 80%;
+            height: 80%;
+            opacity: 0.1;
+        }
+        
+        /* --- 4. Toolbars (Left, Main, Right) --- */
+        #sidebar-toolbar {
+            display: flex;
+            gap: 6px;
+        padding: 8px;
+            margin-top: auto; /* Pushes toolbar to the bottom of the sidebar */
+            border-top: 1px solid var(--bg-tertiary);
+            align-items: center;
+        }
+
+        #sidebar-toolbar button {
+            background-color: transparent;
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+            border-radius: var(--border-radius);
+            padding: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        }
+
+        #sidebar-toolbar button:hover {
+            color: var(--accent-primary);
+            background-color: var(--bg-tertiary);
+        }
+
+        #sidebar-toolbar button:disabled {
+            opacity: 0.2;
+            cursor: not-allowed;
+            background-color: transparent;
+            color: var(--text-secondary);
+        }
+        
+        /* Special button for project export, pushed to the right */
+        #duck-export-btn {
+            background: transparent;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            margin-left: auto;
+        }
+
+        /* Main editor toolbar */
+        #custom-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding-bottom: 12px;
+            margin-bottom: 0px;
+            border-top: 0px solid var(--bg-tertiary);
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        /* Generic button styling for main toolbar and right sidebar tools */
+        #custom-toolbar button,
+        .tool-section button {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--bg-tertiary);
+            border-radius: var(--border-radius);
+            padding: 8px 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+        }
+
+        #custom-toolbar button:hover,
+        .tool-section button:hover {
+            color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        #custom-toolbar button.active-command,
+        .tool-section button.active-command {
+            color: var(--accent-text);
+            background-color: var(--bg-tertiary);
+            border-color: var(--accent-primary);
+        }
+
+        #custom-toolbar button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .toolbar-separator {
+            width: 1px;
+            background-color: var(--bg-secondary);
+            margin: 4px 6px;
+            height: 24px;
+        }
+        
+        /* Right sidebar tool containers and sections */
+        #tools-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        
+        .tool-section {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background-color: var(--bg-primary);
+            padding: 6px;
+            border-radius: var(--border-radius);
+            flex-wrap: wrap;
+        }
+
+        /* Collapsible containers for tool groups */
+        #file-controls-container,
+        #color-picker-container,
+        #settings-container,
+        #export-container {
+            display: none; /* Hidden by default */
+        }
+
+        /* Class to make tool containers visible */
+        #file-controls-container.visible,
+        #color-picker-container.visible,
+        #settings-container.visible ,
+        #export-container.visible {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+  /* Label next to a tool toggle button */
+.tool-section > label {
+    font-size: 1rem;
+    margin-left: 8px;
+    color: #2d2d2d; /* Default color */
+    user-select: none;
+    flex-grow: 1;
+    transition: color 0.2s ease-in-out;
+}
+
+/* Change color when hovering the button OR the label */
+.tool-section > button:hover + label,
+.tool-section > label:hover {
+    color: #2CA9BC; /* Hover color (same as --accent-primary) */
+}
+        
+        /* Hide label when the corresponding tool container is open */
+        .tool-section > button.active-command + label {
+            display: none;
+        }
+        
+        /* --- 5. Editor & Stats --- */
+        .editor-wrapper {
+            flex-grow: 1;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .tox-tinymce {
+            border-radius: var(--border-radius) !important;
+            border: 3px solid var(--bg-tertiary) !important;
+        }
+        
+        /* Word/character count display below the editor */
+        #stats-display {
+            padding: 8px 5px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-align: right;
+            line-height: 1.4;
+            flex-shrink: 0;
+        }
+
+        /* --- 6. Utility Styles --- */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: var(--border-radius);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <audio id="key-sound-1" src="sounds/tp1.mp3" preload="auto"></audio>
+    <audio id="key-sound-2" src="sounds/tp2.mp3" preload="auto"></audio>
+    <audio id="key-sound-3" src="sounds/tp3.mp3" preload="auto"></audio>
+    <audio id="key-sound-4" src="sounds/tp4.mp3" preload="auto"></audio>
+    <audio id="return-sound" src="sounds/cr1.mp3" preload="auto"></audio>
+    <audio id="space-sound" src="sounds/sp2.mp3" preload="auto"></audio>
+
+    <div id="app-container">
+        <div id="sidebar">
+            <h3 id="chapters-title" >be a good duck.</h3>
+            <div id="tab-list"></div>
+            <div id="sidebar-toolbar">
+                <button id="move-up-btn" title="Move Chapter Up">
+                    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" transform="matrix(1, 0, 0, -1, 0, 0)"><path d="M18.71,17.29a1,1,0,0,0-1.42,0L16,18.59V16.71A11.78,11.78,0,0,0,9.45,6.11a1,1,0,0,0-.9,1.78A9.81,9.81,0,0,1,14,16.71v1.88l-1.29-1.3a1,1,0,0,0-1.42,1.42l3,3a1,1,0,0,0,1.42,0l3-3A1,1,0,0,0,18.71,17.29Z" fill="#2ca9bc"></path><path d="M8,22H5a2,2,0,0,1-2-2V4A2,2,0,0,1,5,2H19a2,2,0,0,1,2,2v8a1,1,0,0,1-2,0V4H5V20H8a1,1,0,0,1,0,2Z" fill="currentColor"></path></svg>
+                </button>
+                <button id="move-down-btn" title="Move Chapter Down">
+                    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.71,17.29a1,1,0,0,0-1.42,0L16,18.59V16.71A11.78,11.78,0,0,0,9.45,6.11a1,1,0,0,0-.9,1.78A9.81,9.81,0,0,1,14,16.71v1.88l-1.29-1.3a1,1,0,0,0-1.42,1.42l3,3a1,1,0,0,0,1.42,0l3-3A1,1,0,0,0,18.71,17.29Z" fill="#2ca9bc"></path><path d="M8,22H5a2,2,0,0,1-2-2V4A2,2,0,0,1,5,2H19a2,2,0,0,1,2,2v8a1,1,0,0,1-2,0V4H5V20H8a1,1,0,0,1,0,2Z" fill="currentColor"></path></svg>
+                </button>
+                <button id="new-tab-btn" title="New Chapter">
+                    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7,10h6M10,7v6" fill="none" stroke="#2ca9bc" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M7,21H17a4,4,0,0,0,4-4V5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><rect x="3" y="3" width="14" height="14" rx="1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></rect></svg>
+                </button>
+                <button id="custom-print-btn" title="Print Chapter (Ctrl+P)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18,17h2a1,1,0,0,0,1-1V7a1,1,0,0,0-1-1H4A1,1,0,0,0,3,7v9a1,1,0,0,0,1,1H6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><line x1="8" y1="3" x2="16" y2="3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></line><rect x="6" y="14" width="12" height="7" fill="none" stroke="#2ca9bc" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></rect><line x1="16.95" y1="10" x2="17.05" y2="10" fill="none" stroke="#2ca9bc" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></line></svg>
+                </button>
+                <button id="custom-print-all-btn" title="Print All Chapters (Ctrl+Shift+P)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17,16h3a1,1,0,0,0,1-1V7a1,1,0,0,0-1-1H4A1,1,0,0,0,3,7v8a1,1,0,0,0,1,1H7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><line x1="8" y1="3" x2="16" y2="3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></line><rect x="7" y="11" width="10" height="10" fill="none" stroke="#2ca9bc" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></rect></svg>
+                </button>
+                
+                <button id="duck-export-btn" title="Quacksave All (Ctrl+Q)">
+                    <svg fill="#2ca9bc" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30px" height="30px" viewBox="0 0 359.607 359.606" xml:space="preserve" stroke="#2ca9bc"><g><path d="M303.934,40.65c-0.651-0.758-1.419-1.346-2.229-1.845c-0.214-0.53-0.469-1.054-0.786-1.553 C281.002,6.088,233.275-3.374,200.771,17.396c-29.858,19.083-48.92,60.283-27.714,93.459c3.288,5.288,9.989,18.2,13.225,30.851 c-0.879,0.082-1.763,0.25-2.624,0.594c-0.274,0.112-27.629,11.049-57.378,15.083c-36.645,4.984-59.57-2.208-68.101-21.337 c-2.762-6.198-11.149-25.054-26.12-22.131c-26.305,5.17-31.938,85.724-31.962,86.527c-2.755,87.927,53.201,144.866,149.678,152.326 c4.533,0.353,9.079,0.518,13.643,0.518c51.853,0,104.87-22.22,135.243-57.562c20.812-24.204,29.617-52.457,25.867-82.307 c-0.013-0.25,0.023-0.499,0-0.755c-0.901-9.146-8.976-89.961-15.467-109.988c-0.024-0.082-0.049-0.155-0.067-0.226 c2.284-1.065,7.423-2.101,10.991-2.825c10.717-2.162,24.04-4.85,32.352-15.138l7.271-9.003l-10.333-5.222 C339.483,65.324,312.24,50.354,303.934,40.65z M284.473,283.541c-28.899,33.618-83.744,54.449-133.265,50.588 c-86.594-6.697-134.862-55.21-132.417-133.096c0.53-16.977,8.884-58.901,16.279-67.782c1.23,1.397,3.325,4.366,6.025,10.416 c26.223,58.815,126.259,24.752,146.194,17.274c-0.061,0.244-0.091,0.512-0.164,0.755c-1.349,4.335-4.098,7.277-8.656,9.28 c-4.731,2.076-6.89,7.587-4.813,12.318c1.541,3.514,4.969,5.608,8.574,5.608c1.254,0,2.524-0.256,3.748-0.786 c9.489-4.158,16.072-11.374,19.007-20.864c8.142-26.192-13.53-62.234-16.1-66.362c-14.568-22.807-0.408-53.436,21.964-67.733 c23.376-14.946,60.191-7.925,74.312,14.172c0.676,1.054,1.528,1.921,2.491,2.601c0.158,15.438,1.041,30.844,2.009,46.253 c0.067,1.096,0.329,2.058,0.67,2.956c-0.39,2.893-0.146,5.992,0.938,9.319c4.227,13.034,10.12,62.929,13.25,92.537 c-0.535,1.583-0.67,3.324-0.268,5.078C310.753,234.133,303.921,260.92,284.473,283.541z"></path><path d="M215.507,222.491c-13.384-11.351-31.624-18.438-51.371-19.96c-5.188-0.329-9.646,3.452-10.047,8.604 c-0.399,5.151,3.456,9.645,8.607,10.047c15.856,1.225,30.318,6.753,40.719,15.576c9.535,8.086,14.37,17.945,13.615,27.754 c-0.756,9.804-7.046,18.804-17.714,25.331c-11.63,7.124-26.762,10.364-42.627,9.134c-5.185-0.354-9.646,3.465-10.044,8.604 c-0.399,5.151,3.456,9.651,8.604,10.047c2.658,0.207,5.307,0.305,7.931,0.305c16.891,0,32.951-4.214,45.909-12.13 c15.917-9.742,25.367-23.894,26.604-39.854C236.929,249.996,229.744,234.565,215.507,222.491z"></path><path d="M250.167,52.53c-12.068,0-12.068,18.706,0,18.706C262.229,71.236,262.229,52.53,250.167,52.53z"></path></g></svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="main-content">
+            <div id="custom-toolbar">
+                <button id="toggle-fullscreen-btn" title="Fullscreen (F11)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                    </svg>
+                </button>
+                <div class="toolbar-separator"></div>
+                <button id="custom-undo-btn" title="Undo (Ctrl+Z)"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16.5,8H5.41l1.3-1.29A1,1,0,0,0,5.29,5.29l-3,3a1,1,0,0,0,0,1.42l3,3a1,1,0,0,0,1.42,0,1,1,0,0,0,0-1.42L5.41,10H16.5a3.5,3.5,0,0,1,0,7H13a1,1,0,0,0,0,2h3.5a5.5,5.5,0,0,0,0-11Z" fill="currentColor"></path></svg></button>
+                <button id="custom-redo-btn" title="Redo (Ctrl+Y)"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21.71,8.29l-3-3a1,1,0,0,0-1.42,1.42L18.59,8H7.5a5.5,5.5,0,0,0,0,11H11a1,1,0,0,0,0-2H7.5a3.5,3.5,0,0,1,0-7H18.59l-1.3,1.29a1,1,0,0,0,0,1.42,1,1,0,0,0,1.42,0l3-3A1,1,0,0,0,21.71,8.29Z" fill="currentColor"></path></svg></button>
+
+                <div class="toolbar-separator"></div>
+                <button id="custom-bold-btn" title="Bold (Ctrl+B)" ><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16.42,11.35A5.45,5.45,0,0,0,18,7.5,5.51,5.51,0,0,0,12.5,2H5A1,1,0,0,0,5,4H6V20H5a1,1,0,0,0,0,2h9.5a5.5,5.5,0,0,0,1.92-10.65ZM12.5,4a3.5,3.5,0,0,1,0,7H8V4Zm2,16H8V13h6.5a3.5,3.5,0,0,1,0,7Z" fill="currentColor"></path></svg></button>
+                <button id="custom-italic-btn" title="Italic (Ctrl+I)"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M8,22a1,1,0,0,1,0-2H9.65L12.32,4H11a1,1,0,0,1,0-2h5a1,1,0,0,1,0,2H14.35L11.68,20H13a1,1,0,0,1,0,2Z" fill="currentColor"></path></svg></button>
+                
+                <div class="toolbar-separator"></div>
+                <button id="custom-h1-btn" title="Heading 1"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21,20H17a1,1,0,0,1,0-2h1V10.62l-.55.27a1,1,0,0,1-.9-1.78l2-1A1,1,0,0,1,20,9v9h1a1,1,0,0,1,0,2Z" fill="#2ca9bc"></path><path d="M13,20H11a1,1,0,0,1,0-2V13H5v5a1,1,0,0,1,0,2H3a1,1,0,0,1,0-2V6A1,1,0,0,1,3,4H5A1,1,0,0,1,5,6v5h6V6a1,1,0,0,1,0-2h2a1,1,0,0,1,0,2V18a1,1,0,0,1,0,2Z" fill="currentColor"></path></svg></button>
+                <button id="custom-h2-btn" title="Heading 2"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21,20H16a1,1,0,0,1-1-1,5.93,5.93,0,0,1,3-5.14l1.26-.72A1.51,1.51,0,0,0,20,11.83V11.5a1.5,1.5,0,0,0-3,0V12a1,1,0,0,1-2,0v-.5a3.5,3.5,0,0,1,7,0v.33a3.51,3.51,0,0,1-1.76,3L19,15.59A4,4,0,0,0,17.13,18H21a1,1,0,0,1,0,2Z" fill="#2ca9bc"></path><path d="M12,20H10a1,1,0,0,1,0-2V13H5v5a1,1,0,0,1,0,2H3a1,1,0,0,1,0-2V6A1,1,0,0,1,3,4H5A1,1,0,0,1,5,6v5h5V6a1,1,0,0,1,0-2h2a1,1,0,0,1,0,2V18a1,1,0,0,1,0,2Z" fill="currentColor"></path></svg></button>
+                <button id="custom-h3-btn" title="Heading 3"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19,20H18a3,3,0,0,1-3-3,1,1,0,0,1,2,0,1,1,0,0,0,1,1h1a1,1,0,0,0,1-1V15a1,1,0,0,0-1-1h-.75a1,1,0,0,1-.82-1.57L19.1,10H16a1,1,0,0,1,0-2h5a1,1,0,0,1,.82,1.57L20,12.18A3,3,0,0,1,22,15v2A3,3,0,0,1,19,20Z" fill="#2ca9bc"></path><path d="M12,20H10a1,1,0,0,1,0-2V13H5v5a1,1,0,0,1,0,2H3a1,1,0,0,1,0-2V6A1,1,0,0,1,3,4H5A1,1,0,0,1,5,6v5h5V6a1,1,0,0,1,0-2h2a1,1,0,0,1,0,2V18a1,1,0,0,1,0,2Z" fill="currentColor"></path></svg></button>
+            </div>
+
+            <div class="editor-wrapper">
+                <textarea id="editor"></textarea>
+            </div>
+            
+            <div id="stats-display">Chapter: 0 words / 0 chars<br>Total: 0 words / 0 chars</div>
+        </div>
+        
+        <div id="right-sidebar">
+            <div id="tools-container">
+                
+                <div class="tool-section">
+                    <button id="toggle-file-btn" title="File Operations">
+                        <svg width="18" height="18" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 8 L 4 26 L 28 26 L 28 12 L 16 12 L 14 8 Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
+                    </button>
+                    <label for="toggle-file-btn">file operations</label>
+                    <div id="file-controls-container">
+                        <button id="custom-open-btn" title="Open File"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15.71,17.29a1,1,0,0,0-1.42,0L13,18.59V7a1,1,0,0,0-2,0V18.59l-1.29-1.3a1,1,0,0,0-1.42,1.42l3,3a1,1,0,0,0,1.42,0l3-3A1,1,0,0,0,15.71,17.29Z" fill="#2ca9bc"></path><path d="M19,15H16a1,1,0,0,1,0-2h3V4H5v9H8a1,1,0,0,1,0,2H5a2,2,0,0,1-2-2V4A2,2,0,0,1,5,2H19a2,2,0,0,1,2,2v9A2,2,0,0,1,19,15Z" fill="currentColor"></path></svg></button>
+                        <button id="custom-save-as-btn" title="Save Chapter (Ctrl+S)"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15.71,13.29a1,1,0,0,0-1.42,0L13,14.59V3a1,1,0,0,0-2,0V14.59l-1.29-1.3a1,1,0,0,0-1.42,1.42l3,3a1,1,0,0,0,1.42,0l3-3A1,1,0,0,0,15.71,13.29Z" fill="#2ca9bc"></path><path d="M19,22H5a2,2,0,0,1-2-2V11A2,2,0,0,1,5,9H8a1,1,0,0,1,0,2H5v9H19V11H16a1,1,0,0,1,0-2h3a2,2,0,0,1,2,2v9A2,2,0,0,1,19,22Z" fill="currentColor"></path></svg></button>
+                        <button id="custom-save-all-btn" title="Save All Chapters (Separately)"><svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15.71,13.29a1,1,0,0,1,0,1.42l-3,3a1,1,0,0,1-1.42,0l-3-3a1,1,0,0,1,1.42-1.42L12,15.59l2.29-2.3A1,1,0,0,1,15.71,13.29Zm-4.42-.58a1,1,0,0,0,1.42,0l3-3a1,1,0,0,0-1.42-1.42L13,9.59V3a1,1,0,0,0-2,0V9.59L9.71,8.29A1,1,0,0,0,8.29,9.71Z" fill="#2ca9bc"></path><path d="M19,22H5a2,2,0,0,1-2-2V17a1,1,0,0,1,2,0v3H19V17a1,1,0,0,1,2,0v3A2,2,0,0,1,19,22Z" fill="currentColor"></path></svg></button>
+                    </div>
+                </div>
+
+                <div class="tool-section">
+                    <button id="toggle-colors-btn" title="Ink and Paper Settings">
+                        <svg width="18" height="18" viewBox="0 0 512 512" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M470.314,392.915l-40.059-0.264c-0.043,0-0.083,0-0.117,0c-9.308,0-16.885,7.512-16.944,16.828 c-0.058,9.365,7.473,16.993,16.829,17.06l18.814,0.123c-5.874,10.357-16.995,17.357-29.727,17.383h-0.141 c-18.814-0.049-34.112-15.356-34.112-34.186V284.557c-10.441,8.107-21.918,16.232-33.888,23.258v102.044 c0,12.51,3.631,24.101,9.546,34.186H179.634c-23.969,0-43.461-19.492-43.461-43.46V87.755c0-12.508-3.631-24.1-9.548-34.185 h180.883c23.969,0,43.462,19.493,43.462,43.46v13.478c10.556-8.033,21.634-15.694,32.927-22.992 c-4.756-38.133-36.999-67.834-76.389-67.834c0,0-239.881,0.049-239.964,0.049C30.255,20.03,0,50.409,0,87.755 c0,9.317,7.519,16.886,16.829,16.944l40.059,0.266c0.042,0,0.083,0,0.117,0c9.308,0,16.885-7.513,16.944-16.829 c0.058-9.365-7.473-16.993-16.829-17.059l-18.815-0.125C44.18,60.594,55.3,53.594,68.032,53.57h0.141 c18.814,0.049,34.112,15.355,34.112,34.185v312.83c0,42.649,34.7,77.349,77.35,77.349c0,0,239.881-0.049,239.964-0.049 c37.288-0.299,67.544-30.68,67.544-68.026C487.143,400.544,479.621,392.972,470.314,392.915z"></path> <path id="XMLID_117_" d="M495.291,70.348c-1.521-1.521-3.548-2.316-5.6-2.316c-1.183,0-2.382,0.264-3.492,0.81 c-34.293,16.846-104.104,53.803-143.586,93.292c-43.767,43.758-71.74,89.8-71.565,114.497l-26.989,26.988l-34.235,34.235 l41.93-5.989l10.358-10.358l26.923-26.922c0.074,0,0.132,0.032,0.206,0.032c24.738,0,70.64-27.957,114.266-71.583 c14.163-14.163,27.962-32.273,40.664-51.204l-9.201-9.2l15.199-0.009c3.433-5.32,6.791-10.615,10.011-15.926l-17.226-5.039 l25.631-9.233c11.781-20.468,21.593-39.49,28.22-52.984C498.304,76.396,497.684,72.739,495.291,70.348z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ></path>
+                        </svg>
+                    </button>
+                    <label for="toggle-colors-btn">ink & paper</label>
+                    <div id="color-picker-container">
+                        <svg width="20" height="20" viewBox="0 0 24 24"  xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 4L6.81877 13.8657C7.51796 16.3128 9.45494 18 12 18C12.575 18 13.1499 17.8953 13.7037 17.7037L15.5858 19.5858C16.3668 20.3668 17.6332 20.3668 18.4142 19.5858L19.5858 18.4142C20.3668 17.6332 20.3668 16.3668 19.5858 15.5858L17.7083 13.7083C17.8964 13.1601 18 12.5852 18 12C18 9.45494 16.3128 7.51796 13.8657 6.81877L4 4ZM4 4L11.2929 11.2929M11.2929 11.2929C11.1119 11.4739 11 11.7239 11 12C11 12.5523 11.4477 13 12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.7239 11 11.4739 11.1119 11.2929 11.2929Z" stroke="currentColor" stroke-width="1.5"></path>
+                        </svg>
+                        <input type="color" id="editor-text-color" title="Editor Text Color" value="#d4d4d4">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9.29289 1.29289C9.48043 1.10536 9.73478 1 10 1H18C19.6569 1 21 2.34315 21 4V20C21 21.6569 19.6569 23 18 23H6C4.34315 23 3 21.6569 3 20V8C3 7.73478 3.10536 7.48043 3.29289 7.29289L9.29289 1.29289ZM18 3H11V8C11 8.55228 10.5523 9 10 9H5V20C5 20.5523 5.44772 21 6 21H18C18.5523 21 19 20.5523 19 20V4C19 3.44772 18.5523 3 18 3ZM6.41421 7H9V4.41421L6.41421 7Z"></path>
+                        </svg>
+                        <input type="color" id="editor-bg-color" title="Editor Background Color" value="#2d2d2d">
+                    </div>
+                </div>
+
+                <div class="tool-section">
+                    <button id="toggle-settings-btn" title="Settings">
+                        <svg width="18" height="18" viewBox="0 0 46 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M39.23,26a16.52,16.52,0,0,0,.14-2,16.52,16.52,0,0,0-.14-2l4.33-3.39a1,1,0,0,0,.25-1.31l-4.1-7.11a1,1,0,0,0-1.25-.44l-5.11,2.06a15.68,15.68,0,0,0-3.46-2l-.77-5.43a1,1,0,0,0-1-.86H19.9a1,1,0,0,0-1,.86l-.77,5.43a15.36,15.36,0,0,0-3.46,2L9.54,9.75a1,1,0,0,0-1.25.44L4.19,17.3a1,1,0,0,0,.25,1.31L8.76,22a16.66,16.66,0,0,0-.14,2,16.52,16.52,0,0,0,.14,2L4.44,29.39a1,1,0,0,0-.25,1.31l4.1,7.11a1,1,0,0,0,1.25.44l5.11-2.06a15.68,15.68,0,0,0,3.46,2l.77,5.43a1,1,0,0,0,1,.86h8.2a1,1,0,0,0,1-.86l.77-5.43a15.36,15.36,0,0,0,3.46-2l5.11,2.06a1,1,0,0,0,1.25-.44l4.1-7.11a1,1,0,0,0-.25-1.31ZM24,31.18A7.18,7.18,0,1,1,31.17,24,7.17,7.17,0,0,1,24,31.18Z" stroke="currentColor" stroke-width="2.5" ></path>
+                        </svg>
+                    </button>
+                    <label for="toggle-settings-btn">editor settings</label>
+                    <div id="settings-container">
+                        <button id="toggle-font-btn" title="Toggle Font Style">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 5C3 4.44772 3.44772 4 4 4H12H20C20.5523 4 21 4.44772 21 5V7C21 7.55228 20.5523 8 20 8C19.4477 8 19 7.55228 19 7V6H13V19H15C15.5523 19 16 19.4477 16 20C16 20.5523 15.5523 21 15 21H12H9C8.44772 21 8 20.5523 8 20C8 19.4477 8.44772 19 9 19H11V6H5V7C5 7.55228 4.55228 8 4 8C3.44772 8 3 7.55228 3 7V5Z" fill="currentColor" stroke-width="0" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button id="toggle-sounds-btn" title="Toggle Typewriter Sounds">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M11 5L6 9H2V15H6L11 19V5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M15.54 8.46C16.48 9.4 17 10.62 17 12C17 13.38 16.48 14.6 15.54 15.54" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tool-section">
+                    <button id="toggle-export-btn" title="Export">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17 17L22 12L17 7M7 7L2 12L7 17M14 3L10 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
+                    </button>
+                    <label for="toggle-export-btn">project import/export</label>
+                    <div id="export-container">
+                        <button id="custom-import-btn" title="Import Project">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15.71,13.29a1,1,0,0,1,0,1.42l-3,3a1,1,0,0,1-1.42,0l-3-3a1,1,0,0,1,1.42-1.42L12,15.59l2.29-2.3A1,1,0,0,1,15.71,13.29Zm-4.42-.58a1,1,0,0,0,1.42,0l3-3a1,1,0,0,0-1.42-1.42L13,9.59V3a1,1,0,0,0-2,0V9.59L9.71,8.29A1,1,0,0,0,8.29,9.71Z" fill="#2ca9bc"></path>
+                                <path d="M20,22H4a2,2,0,0,1-2-2V11A2,2,0,0,1,4,9H5a1,1,0,0,1,0,2H4v9H20V11H19a1,1,0,0,1,0-2h1a2,2,0,0,1,2,2v9A2,2,0,0,1,20,22Z" fill="currentColor"></path>
+                            </svg>
+                        </button>
+                        <button id="custom-export-all-btn" title="Export Project (Quacksave)">
+                            <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M8.29,6.71a1,1,0,0,1,0-1.42l3-3a1,1,0,0,1,1.42,0l3,3a1,1,0,0,1,0,1.42,1,1,0,0,1-1.42,0L12,4.41,9.71,6.71A1,1,0,0,1,8.29,6.71Zm4.42.58a1,1,0,0,0-1.42,0l-3,3a1,1,0,0,0,1.42,1.42L11,10.41V17a1,1,0,0,0,2,0V10.41l1.29,1.3a1,1,0,0,0,1.42,0,1,1,0,0,0,0-1.42Z" fill="#2ca9bc"></path>
+                                <path d="M20,22H4a2,2,0,0,1-2-2V11A2,2,0,0,1,4,9H5a1,1,0,0,1,0,2H4v9H20V11H19a1,1,0,0,1,0-2h1a2,2,0,0,1,2,2v9A2,2,0,0,1,20,22Z" fill="currentColor"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+          
+      <!--       <div id="deco-container">
+                
+            </div>  -->
+        </div>
+    </div>
+
+
+<script>
+    (() => { // IIFE to encapsulate the entire script and avoid global scope pollution.
+
+        // --- 1. APPLICATION STATE & CONSTANTS --- 
+
+        /** @type {tinymce.Editor | null} The active TinyMCE editor instance. */
+        let editor = null;
+        /** @type {Array<Object>} Holds the state for all open tabs (chapters). */
+        let tabs = [];
+        /** @type {number | null} The ID of the currently active tab. */
+        let activeTabId = null;
+		let projectTitle = 'be a good duck.'; 
+		let clickTimer = null;
+
+        /** @type {boolean} A flag to prevent concurrent state-changing operations (like switching tabs while another is closing). */
+        let isStateOperationInProgress = false;
+        /** @type {TurndownService | null} Instance of Turndown to convert HTML to Markdown. */
+        let turndownService = null;
+        /** @type {boolean} Toggles typewriter sound effects on/off. */
+        let soundsEnabled = true;
+        /** @type {boolean} Toggles between the primary (serif) and secondary (sans-serif) font. */
+        let isPrimaryFont = true;
+
+        // Constants 
+        const FONT_PRIMARY = '"Georgia", serif';
+        const FONT_SECONDARY = 'system-ui, -apple-system, sans-serif';
+
+        // DOM Element References 
+        const tabListEl = document.getElementById('tab-list');
+
+        // --- 2. CORE LOGIC (Data & State Management) --- 
+		
+        /** * Creates a new tab object, adds it to the application state, and makes it active. 
+         * @param {string} [name='Untitled'] The name for the new tab. 
+         * @param {string} [content=''] The initial content of the new tab. 
+         * @returns {Promise<Object | null>} The new tab object or null if an operation was in progress. 
+         */
+        async function createNewTab(name = `Untitled ${tabs.length + 1}`, content = '') {
+            if (isStateOperationInProgress) return null;
+            isStateOperationInProgress = true;
+            let newTab = null;
+            try {
+                await saveCurrentTabContent();
+                newTab = { id: Date.now(), name, content};
+                tabs.push(newTab);
+                activeTabId = newTab.id;
+
+                if (editor && editor.initialized) {
+                    await loadTabContent(newTab);
+                    renderTabs();
+                    saveStateToLocalStorage();
+                }
+            } finally {
+                isStateOperationInProgress = false;
+            }
+            return newTab;
+        }
+
+
+        /** * Switches the active tab. Saves the current tab's content before switching. 
+         * @param {number} tabId The ID of the tab to switch to. 
+         */
+        async function switchTab(tabId) {
+            if (tabId === activeTabId || isStateOperationInProgress) return;
+            isStateOperationInProgress = true;
+            try {
+                await saveCurrentTabContent();
+                activeTabId = tabId;
+                const tabToLoad = tabs.find(t => t.id === activeTabId);
+                await loadTabContent(tabToLoad);
+                renderTabs();
+                saveStateToLocalStorage();
+            } finally {
+                isStateOperationInProgress = false;
+            }
+        }
+
+        /** * Closes a tab, removing it from the state and the UI. 
+         * @param {number} tabId The ID of the tab to close. 
+         */
+        async function closeTab(tabId) {
+            if (!confirm('Are you sure you want to close this chapter?')) {
+                return; // Stop if the user cancels. 
+            }
+
+            if (isStateOperationInProgress) return;
+            isStateOperationInProgress = true;
+            try {
+                const index = tabs.findIndex(t => t.id === tabId);
+                if (index === -1) return;
+
+                tabs.splice(index, 1);
+
+                // If the closed tab was active, switch to an adjacent tab or create a new one. 
+                if (activeTabId === tabId) {
+                    const newActiveTab = tabs[index] || tabs[index - 1] || null;
+                    if (newActiveTab) {
+                        activeTabId = newActiveTab.id;
+                        await loadTabContent(newActiveTab);
+                    } else {
+                        await createNewTab(); // Create a new tab if it was the last one 
+                    }
+                }
+                
+                renderTabs();
+                saveStateToLocalStorage();
+                updateStats();
+            } finally {
+                isStateOperationInProgress = false;
+            }
+        }
+
+        /** * Moves the active tab up or down in the list. 
+         * @param {number} direction -1 to move up, 1 to move down. 
+         */
+        function moveActiveTab(direction) {
+            if (!activeTabId) return;
+            const index = tabs.findIndex(t => t.id === activeTabId);
+            if (index === -1) return;
+
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= tabs.length) return; // Boundary check 
+
+            // Swap elements in the array 
+            [tabs[index], tabs[newIndex]] = [tabs[newIndex], tabs[index]];
+            
+            renderTabs();
+            saveStateToLocalStorage();
+        }
+
+        /** * Saves the current editor content to the active tab's state object. 
+         */
+        async function saveCurrentTabContent() {
+            if (activeTabId === null || !editor || !editor.initialized) return;
+            const currentTab = tabs.find(t => t.id === activeTabId);
+            if (currentTab) {
+                currentTab.content = getContentAsMarkdown();
+            }
+        }
+
+        /** * Saves the entire application state (tabs, active tab) to localStorage. 
+         */
+        function saveStateToLocalStorage() {
+            try {
+                const serializableTabs = tabs.map(tab => ({
+                    id: tab.id,
+                    name: tab.name,
+                    content: tab.content
+                }));
+                const state = { tabs: serializableTabs, activeTabId, projectTitle };
+                localStorage.setItem('editorState', JSON.stringify(state));
+            } catch (e) {
+                console.error("Could not save state. Storage may be full.", e);
+            }
+        }
+
+        /** * Loads application state from localStorage on startup. 
+         * @returns {Promise<boolean>} True if state was successfully loaded, otherwise false. 
+         */
+		async function loadState() {
+			soundsEnabled = (localStorage.getItem('soundsEnabled') || 'true') === 'true';
+			isPrimaryFont = (localStorage.getItem('isPrimaryFont') || 'true') === 'true';
+
+			const savedStateJSON = localStorage.getItem('editorState');
+			if (!savedStateJSON) return false;
+
+			try {
+				const savedState = JSON.parse(savedStateJSON);
+				if (!savedState || typeof savedState !== 'object') return false;
+
+				projectTitle = savedState.projectTitle || 'Chapters';
+				document.getElementById('chapters-title').textContent = projectTitle;
+
+				tabs = Array.isArray(savedState.tabs) ? savedState.tabs : [];
+				activeTabId = savedState.activeTabId || null;
+				return true;
+			} catch (e) {
+				console.error("Failed to load or parse state from localStorage. Starting fresh.", e);
+				localStorage.removeItem('editorState');
+				return false;
+			}
+		}
+
+        // --- 3. UI, EVENT HANDLING & EDITOR INTEGRATION --- 
+
+		/** * Renders the tab list in the sidebar based on the current `tabs` array. 
+		 */
+		function renderTabs() {
+			tabListEl.innerHTML = ''; // Clear existing tabs 
+
+			tabs.forEach(tab => {
+				// --- Create the main tab container ---
+				const tabEl = document.createElement('div');
+				tabEl.className = 'tab';
+				tabEl.dataset.tabId = tab.id;
+				if (tab.id === activeTabId) {
+					tabEl.classList.add('active');
+				}
+
+				// --- Create and add the close button FIRST ---
+				const closeSpan = document.createElement('span');
+				closeSpan.className = 'tab-close';
+				closeSpan.innerHTML = '&times;';
+				tabEl.appendChild(closeSpan);
+
+				// --- Create the chapter name span ---
+				const displayName = tab.name.replace(/\.[^/.]+$/, ""); // Hide file extension for display
+				const nameSpan = document.createElement('span');
+				nameSpan.className = 'tab-name';
+				nameSpan.textContent = displayName;
+				nameSpan.setAttribute('contenteditable', 'false');
+				nameSpan.dataset.originalName = displayName;
+				
+				tabEl.appendChild(nameSpan);
+
+			
+
+				// --- Add the completed tab to the list ---
+				tabListEl.appendChild(tabEl);
+			});
+
+			updateReorderButtonsState();
+		}
+
+        /** * Applies the user's chosen font to the UI and editor. 
+         */
+        function applyFontSetting() {
+            const targetFont = isPrimaryFont ? FONT_PRIMARY : FONT_SECONDARY;
+            
+            document.body.style.fontFamily = targetFont;
+            if (editor && editor.initialized) {
+                editor.getDoc().body.style.fontFamily = targetFont;
+            }
+
+            const fontButton = document.getElementById('toggle-font-btn');
+            if (fontButton) {
+                fontButton.classList.toggle('active-command', isPrimaryFont);
+            }
+        }
+		
+        /** * Updates the word and character count display for the current chapter and the total project. 
+         */
+        function updateStats() {
+            if (!editor || !editor.initialized) return;
+            const markdownContent = getContentAsMarkdown();
+            
+            const words = markdownContent ? (markdownContent.match(/\b\w+\b/g)?.length ?? 0) : 0;
+            const chars = markdownContent.length;
+
+            let totalWords = 0, totalChars = 0;
+            tabs.forEach(tab => {
+                const tabText = tab.content || '';
+                totalWords += tabText ? (tabText.match(/\b\w+\b/g)?.length ?? 0) : 0;
+                totalChars += tabText.length;
+            });
+
+            document.getElementById('stats-display').innerHTML = `${words} / ${totalWords} `;
+        }
+        
+        /** * Updates the active state of formatting buttons (Bold, Italic, etc.) based on the cursor's position. 
+         */
+        function updateToolbarActiveStates() {
+            if (!editor || !editor.initialized) return;
+            const commandMap = {
+                'custom-bold-btn': 'bold',
+                'custom-italic-btn': 'italic',
+                'custom-h1-btn': 'h1',
+                'custom-h2-btn': 'h2',
+                'custom-h3-btn': 'h3'
+            };
+            for (const buttonId in commandMap) {
+                const button = document.getElementById(buttonId);
+                if (button) {
+                    const command = commandMap[buttonId];
+                    const isActive = command.startsWith('h') ? editor.formatter.match(command) : editor.queryCommandState(command);
+                    button.classList.toggle('active-command', !!isActive);
+                }
+            }
+        }
+        
+        /** * Enables or disables the up/down chapter reorder buttons based on the active tab's position. 
+         */
+        function updateReorderButtonsState() {
+            const moveUpBtn = document.getElementById('move-up-btn');
+            const moveDownBtn = document.getElementById('move-down-btn');
+            if (!moveUpBtn || !moveDownBtn) return;
+            
+            const index = tabs.findIndex(t => t.id === activeTabId);
+            moveUpBtn.disabled = (index <= 0);
+            moveDownBtn.disabled = (index === -1 || index >= tabs.length - 1);
+        }
+
+
+        
+        /** * Sets the editor's content from a Markdown string, parsing it to HTML first. 
+         * @param {string} content - The Markdown content to load. 
+         */
+        function setContent(content) {
+            if (editor && editor.initialized) {
+                editor.setContent(marked.parse(content || ''));
+            }
+        }
+
+        /** * Loads the content for a given tab into the editor. 
+         * @param {Object} tab The tab object whose content should be loaded. 
+         */
+        async function loadTabContent(tab) {
+            const content = tab ? tab.content : '';
+            if (editor && editor.initialized) {
+                setContent(content);
+                editor.undoManager.clear();
+                updateStats();
+                updateToolbarActiveStates();
+            }
+        }
+        
+        /** * Gets the current editor content as Markdown. 
+         * @returns {string} The editor content converted from HTML to Markdown. 
+         */
+        function getContentAsMarkdown() {
+            if (!editor || !editor.initialized) return '';
+            return turndownService.turndown(editor.getContent());
+        }
+
+        /** * Plays an audio element if sounds are enabled. 
+         * @param {HTMLAudioElement} audioElement The audio element to play. 
+         */
+        function playSound(audioElement) {
+            if (!soundsEnabled || !audioElement) return;
+            audioElement.currentTime = 0;
+            audioElement.play().catch(error => {
+                if (error.name !== 'AbortError') {
+                    console.error("Audio playback error:", error);
+                }
+            });
+        }
+        
+        /** * Applies user preferences (colors, fonts, sounds) from localStorage to the UI. 
+         */
+        function applyStoredPreferences() {
+            const textColorPicker = document.getElementById('editor-text-color');
+            const bgColorPicker = document.getElementById('editor-bg-color');
+            const editorBody = tinymce.get('editor').getDoc().body;
+            
+            const savedTextColor = localStorage.getItem('editorTextColor') || '#d4d4d4';
+            const savedBgColor = localStorage.getItem('editorBgColor') || '#2d2d2d';
+
+            textColorPicker.value = savedTextColor;
+            bgColorPicker.value = savedBgColor;
+            editorBody.style.color = savedTextColor;
+            editorBody.style.backgroundColor = savedBgColor;
+
+            document.getElementById('toggle-sounds-btn').classList.toggle('active-command', soundsEnabled);
+            applyFontSetting();
+        }
+
+        /**
+         * Sets up a toggle button to show/hide a container and manage its active state.
+         * @param {string} buttonId The ID of the toggle button.
+         * @param {string} containerId The ID of the container to toggle.
+         */
+		function setupToggleButton(buttonId, containerId) {
+			const button = document.getElementById(buttonId);
+			const container = document.getElementById(containerId);
+
+			if (!button || !container) {
+				console.warn(`Toggle button setup failed for button: #${buttonId}`);
+				return;
+			}
+
+			button.addEventListener('click', () => {
+				const isNowVisible = container.classList.toggle('visible');
+				button.classList.toggle('active-command', isNowVisible);
+			});
+		}
+
+        /** * Attaches all primary event listeners for the application UI. 
+         */
+        function setupEventListeners() {
+            editor.on('input', debounce(async () => {
+                await saveCurrentTabContent();
+                saveStateToLocalStorage();
+                updateStats();
+      
+            }, 500));
+
+            editor.on('NodeChange', debounce(updateToolbarActiveStates, 100));
+
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 's') {
+                    e.preventDefault();
+                    handleQuickSave();
+                }
+            });
+
+            tabListEl.addEventListener('click', (e) => {
+				clearTimeout(clickTimer);
+				clickTimer = setTimeout(() => {
+					const tabEl = e.target.closest('.tab');
+					if (!tabEl) return;
+					
+					const tabId = Number(tabEl.dataset.tabId);
+					if (e.target.closest('.tab-close')) {
+						closeTab(tabId);
+					} else if (!e.target.closest('.tab-name[contenteditable="true"]')) {
+						switchTab(tabId);
+					}
+				}, 200);
+            });
+
+            tabListEl.addEventListener('dblclick', (e) => {
+				clearTimeout(clickTimer);
+                const nameSpan = e.target.closest('.tab-name');
+                if (nameSpan) {
+                    nameSpan.setAttribute('contenteditable', 'true');
+                    nameSpan.focus();
+                    document.execCommand('selectAll', false, null);
+                }
+            });
+
+            tabListEl.addEventListener('blur', (e) => {
+                const nameSpan = e.target.closest('.tab-name');
+                if (nameSpan && nameSpan.getAttribute('contenteditable') === 'true') {
+                    nameSpan.setAttribute('contenteditable', 'false');
+                    const newName = nameSpan.textContent.trim();
+                    const tabId = Number(nameSpan.closest('.tab').dataset.tabId);
+                    const tab = tabs.find(t => t.id === tabId);
+                    
+                    if (tab && newName) {
+                        tab.name = newName;
+                        saveStateToLocalStorage();
+                        renderTabs();
+                    } else {
+                        nameSpan.textContent = nameSpan.dataset.originalName;
+                    }
+                }
+            }, true);
+
+			const chaptersTitleEl = document.getElementById('chapters-title');
+
+			chaptersTitleEl.addEventListener('dblclick', () => {
+				chaptersTitleEl.setAttribute('contenteditable', 'true');
+				chaptersTitleEl.focus();
+				document.execCommand('selectAll', false, null);
+			});
+
+			chaptersTitleEl.addEventListener('blur', () => {
+				chaptersTitleEl.setAttribute('contenteditable', 'false');
+				const newTitle = chaptersTitleEl.textContent.trim();
+				if (newTitle) {
+					projectTitle = newTitle;
+					saveStateToLocalStorage();
+				} else {
+					chaptersTitleEl.textContent = projectTitle;
+				}
+			});
+
+			chaptersTitleEl.addEventListener('keydown', (e) => {
+				if (chaptersTitleEl.getAttribute('contenteditable') === 'true' && e.key === 'Enter') {
+					e.preventDefault();
+					chaptersTitleEl.blur();
+				}
+			});
+
+            tabListEl.addEventListener('keydown', (e) => {
+                const nameSpan = e.target.closest('.tab-name');
+                if (nameSpan && nameSpan.getAttribute('contenteditable') === 'true') {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        nameSpan.blur();
+                    } else if (e.key === 'Escape') {
+                        nameSpan.textContent = nameSpan.dataset.originalName;
+                        nameSpan.blur();
+                    }
+                }
+            });
+            
+            document.getElementById('new-tab-btn').addEventListener('click', () => createNewTab());
+            document.getElementById('move-up-btn').addEventListener('click', () => moveActiveTab(-1));
+            document.getElementById('move-down-btn').addEventListener('click', () => moveActiveTab(1));
+            document.getElementById('custom-import-btn').addEventListener('click', handleImportProject);
+            document.getElementById('custom-open-btn').addEventListener('click', handleFileOpen);
+            document.getElementById('custom-save-as-btn').addEventListener('click', handleSaveAs);
+            document.getElementById('custom-save-all-btn').addEventListener('click', handleSaveAll);
+            document.getElementById('duck-export-btn').addEventListener('click', handleExportProject);
+            document.getElementById('custom-export-all-btn').addEventListener('click', handleExportProject);
+            document.getElementById('custom-print-btn').addEventListener('click', handlePrint);
+            document.getElementById('custom-print-all-btn').addEventListener('click', handlePrintAll);
+            document.getElementById('toggle-fullscreen-btn').addEventListener('click', toggleFullScreen);
+
+            document.getElementById('custom-undo-btn').addEventListener('click', () => editor.execCommand('undo'));
+            document.getElementById('custom-redo-btn').addEventListener('click', () => editor.execCommand('redo'));
+            document.getElementById('custom-bold-btn').addEventListener('click', () => editor.execCommand('bold'));
+            document.getElementById('custom-italic-btn').addEventListener('click', () => editor.execCommand('italic'));
+            document.getElementById('custom-h1-btn').addEventListener('click', () => editor.execCommand('mceToggleFormat', false, 'h1'));
+            document.getElementById('custom-h2-btn').addEventListener('click', () => editor.execCommand('mceToggleFormat', false, 'h2'));
+            document.getElementById('custom-h3-btn').addEventListener('click', () => editor.execCommand('mceToggleFormat', false, 'h3'));
+            
+            setupToggleButton('toggle-file-btn', 'file-controls-container');
+            setupToggleButton('toggle-colors-btn', 'color-picker-container');
+            setupToggleButton('toggle-settings-btn', 'settings-container');
+            setupToggleButton('toggle-export-btn', 'export-container');
+            
+            document.getElementById('editor-text-color').addEventListener('input', (e) => {
+                const newColor = e.target.value;
+                tinymce.get('editor').getDoc().body.style.color = newColor;
+                localStorage.setItem('editorTextColor', newColor);
+            });
+            document.getElementById('editor-bg-color').addEventListener('input', (e) => {
+                const newColor = e.target.value;
+                tinymce.get('editor').getDoc().body.style.backgroundColor = newColor;
+                localStorage.setItem('editorBgColor', newColor);
+            });
+            document.getElementById('toggle-sounds-btn').addEventListener('click', (e) => {
+                soundsEnabled = !soundsEnabled;
+                e.currentTarget.classList.toggle('active-command', soundsEnabled);
+                localStorage.setItem('soundsEnabled', String(soundsEnabled));
+            });
+            document.getElementById('toggle-font-btn').addEventListener('click', () => {
+                isPrimaryFont = !isPrimaryFont;
+                localStorage.setItem('isPrimaryFont', String(isPrimaryFont));
+                applyFontSetting();
+            });
+            
+        }
+        
+        // --- 4. FILE SYSTEM, PRINTING & FULLSCREEN HANDLERS --- 
+
+        /** * Handles opening a single text file and creating a new tab for it. 
+         */
+        async function handleFileOpen() {
+			try {
+				const [fileHandle] = await window.showOpenFilePicker({
+					types: [{ description: 'Text File', accept: { 'text/plain': ['.txt', '.md'] } }]
+				});
+				const file = await fileHandle.getFile();
+				const content = await file.text();
+				await createNewTab(file.name, content);
+			} catch (err) {
+				if (err.name !== 'AbortError') console.error("File open error:", err);
+			}
+        }
+
+        /** * Saves the current tab's content. Now an alias for handleSaveAs.
+         */
+        async function handleQuickSave() {
+            await handleSaveAs();
+        }
+        
+        /** * Triggers the "Save As" dialog for the currently active tab. 
+         */
+        async function handleSaveAs() {
+            await saveTabAs(activeTabId);
+        }
+
+        /** * Saves a specific tab to a new file location chosen by the user. 
+         * @param {number} tabId The ID of the tab to save. 
+         * @returns {Promise<boolean>} True on successful save, false on failure or cancellation. 
+         */
+        async function saveTabAs(tabId) {
+            const tab = tabs.find(t => t.id === tabId);
+            if (!tab) return false;
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: tab.name.replace(/\.[^/.]+$/, '') + '.txt',
+                    types: [{ description: 'Text File', accept: { 'text/plain': ['.txt', '.md'] } }],
+                });
+                
+                const writable = await handle.createWritable();
+				const contentToSave = (tab.id === activeTabId) ? getContentAsMarkdown() : tab.content;
+                await writable.write(contentToSave);
+                await writable.close();
+
+                tab.name = handle.name;
+               
+                
+                if (activeTabId === tabId) renderTabs();
+				saveStateToLocalStorage();
+                return true;
+            } catch (err) {
+                if (err.name !== 'AbortError') console.error(`Could not save tab ${tab.id}:`, err);
+                return false;
+            }
+        }
+        
+        /** * Iterates through all tabs and triggers "Save As" for each one.
+         */
+        async function handleSaveAll() {
+            await saveCurrentTabContent();
+            for (const tab of tabs) {
+                await saveTabAs(tab.id);
+            }
+            renderTabs();
+            alert("Save All complete.");
+        }
+        
+		/**
+		 * Gathers all chapters and exports them as a single text file.
+		 * The file format for each chapter is: `#### Chapter Name\n\n---\n\nChapter Content`
+		 */
+// Replace your existing handleExportProject function with this
+async function handleExportProject() {
+    await saveCurrentTabContent();
+    const suggestedFilename = `${generateProjectIdentifier()}.txt`; // Use the helper
+
+    const fullText = tabs.map(tab => {
+        const cleanName = tab.name.replace(/\.[^/.]+$/, "");
+        return `#### ${cleanName}\n\n---\n\n${tab.content}`;
+    }).join('\n\n\n');
+
+    try {
+        const handle = await window.showSaveFilePicker({
+            suggestedName: suggestedFilename, // Use the generated filename
+            types: [{
+                description: 'Text File',
+                accept: { 'text/plain': ['.txt', '.md'] }
+            }],
+        });
+
+        const writable = await handle.createWritable();
+        await writable.write(fullText);
+        await writable.close();
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.error("Project export error:", err);
+        }
+    }
+}
+		/**
+		 * Imports a project file, parsing it into separate chapters and creating new tabs.
+		 */
+		async function handleImportProject() {
+			if (!confirm('Importing a project will replace all current tabs. Are you sure?')) {
+				return;
+			}
+
+			try {
+				const [fileHandle] = await window.showOpenFilePicker({
+					types: [{ description: 'Text File', accept: { 'text/plain': ['.txt', '.md'] } }],
+				});
+				const file = await fileHandle.getFile();
+				const fullText = await file.text();
+
+				tabs = [];
+				activeTabId = null;
+
+				const chapterBlocks = fullText.trim().split(/\n\n\n#### /);
+				
+				if (chapterBlocks.length > 0 && chapterBlocks[0].startsWith('#### ')) {
+					chapterBlocks[0] = chapterBlocks[0].substring(5);
+				}
+
+				chapterBlocks.forEach((block, index) => {
+					const parts = block.split('\n\n---\n\n');
+					if (parts.length >= 1) {
+						const tabName = parts.shift().trim();
+						const tabContent = parts.join('\n\n---\n\n').trim();
+
+						tabs.push({
+							id: Date.now() + index,
+							name: tabName,
+							content: tabContent
+						});
+					}
+				});
+
+				if (tabs.length > 0) {
+					activeTabId = tabs[0].id;
+					await loadTabContent(tabs[0]);
+				} else {
+					await createNewTab();
+				}
+
+				renderTabs();
+				saveStateToLocalStorage();
+				alert(`Project imported successfully with ${tabs.length} chapter(s)!`);
+
+			} catch (err) {
+				if (err.name !== 'AbortError') {
+					console.error('Failed to import project:', err);
+					alert('An error occurred during import. The file might be corrupted or in the wrong format.');
+				}
+			}
+		}
+
+
+        /** * Triggers the browser's print dialog for the current chapter's content. 
+         */
+        /**
+ * Triggers the browser's print dialog for the current chapter's content,
+ * using the chapter's name as the document title.
+ */
+function handlePrint() {
+    const currentTab = tabs.find(t => t.id === activeTabId);
+    // Use the tab's clean name as the title, with a fallback
+    const printTitle = currentTab ? currentTab.name.replace(/\.[^/.]+$/, "") : "Current Chapter";
+
+    printContent(editor.getContent(), printTitle);
+}
+
+        /** * Triggers the browser's print dialog for all chapters combined. 
+         */
+ // Replace your existing handlePrintAll function with this
+async function handlePrintAll() {
+    await saveCurrentTabContent();
+    const printTitle = generateProjectIdentifier(); // Generate the title
+
+    let fullHtml = tabs.map(tab => {
+        const cleanName = tab.name.replace(/\.[^/.]+$/, "");
+        return `<h3>${escapeHtml(cleanName)}</h3>${marked.parse(tab.content || '')}`;
+    }).join('<hr>');
+
+    printContent(fullHtml, printTitle); // Pass the title to be printed
+}
+
+        /** * Creates a temporary, hidden iframe to print HTML content without altering the main page. 
+         * @param {string} htmlContent The HTML content string to be printed. 
+         */
+function printContent(htmlContent, documentTitle = 'Print') {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    
+    const iframeDoc = iframe.contentWindow.document;
+    iframeDoc.open();
+    // We've added a <style> block to the <head> to control the print margins
+    iframeDoc.write(`
+        <html>
+            <head>
+                <title>${escapeHtml(documentTitle)}</title>
+                <style>
+                    @page {
+                        margin: 0.75in; /* Adjust this value for your desired print margin */
+                    }
+                    body {
+                        margin: 0;
+                        font-family: ${isPrimaryFont ? FONT_PRIMARY : FONT_SECONDARY}; 
+                        line-height: 1.8;
+                    }
+                </style>
+            </head>
+            <body>
+                ${htmlContent}
+            </body>
+        </html>
+    `);
+    iframeDoc.close();
+    
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+    document.body.removeChild(iframe);
+}
+        
+        /** * Toggles the browser's fullscreen mode. 
+         */
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+
+        // --- 5. UTILITIES & INITIALIZATION --- 
+
+/**
+ * Generates a filename-safe string from the project title and current date.
+ * @returns {string} The formatted string, e.g., "2025-08-02_My_Project_Title".
+ */
+function generateProjectIdentifier() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // JS months are 0-11
+    const day = String(now.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+
+    // Sanitize the project title to make it a valid filename
+    const sanitizedTitle = projectTitle.replace(/\s+/g, '_').replace(/[^\w-]/g, '');
+
+    return `${dateString}_${sanitizedTitle}`;
+}
+
+
+
+        /** * Escapes basic HTML characters to prevent them from being interpreted as tags. 
+         * @param {string} unsafe The string to escape. 
+         * @returns {string} The escaped string. 
+         */
+        function escapeHtml(unsafe) {
+			return unsafe
+				.replace(/&/g, "&amp;")
+				.replace(/</g, "&lt;")
+				.replace(/>/g, "&gt;")
+				.replace(/"/g, "&quot;")
+				.replace(/'/g, "&#039;");
+		}
+
+        /** * Creates a debounced function that delays invoking `func` until after `timeout` milliseconds 
+         * have elapsed since the last time the debounced function was invoked. 
+         * @param {Function} func The function to debounce. 
+         * @param {number} [timeout=300] The number of milliseconds to delay. 
+         * @returns {Function} The new debounced function. 
+         */
+        function debounce(func, timeout = 300) {
+            let timer;
+            return (...args) => {
+                clearTimeout(timer);
+                timer = setTimeout(() => { func.apply(this, args); }, timeout);
+            };
+        }
+
+        /** * The callback function executed once the TinyMCE editor is fully initialized. 
+         * This is where the main application logic kicks in after loading is complete. 
+         */
+        async function onEditorReady() {
+            const stateLoaded = await loadState();
+
+            if (stateLoaded && tabs.length > 0) {
+                const activeTabExists = tabs.some(t => t.id === activeTabId);
+                if (!activeTabExists) {
+                    activeTabId = tabs[0].id;
+                }
+            } else if (tabs.length === 0) {
+                await createNewTab();
+            }
+
+            const initialTab = tabs.find(t => t.id === activeTabId);
+            await loadTabContent(initialTab);
+            
+            renderTabs();
+            applyStoredPreferences();
+            setupEventListeners();
+        }
+
+        /** * Configures and initializes the TinyMCE editor. 
+         */
+        function setupEditor() {
+            tinymce.init({
+                selector: '#editor',
+                promotion: false,
+                toolbar: false,
+                menubar: false,
+                statusbar: false,
+                skin: 'oxide-dark',
+                content_css: 'dark',
+                plugins: 'autoresize',
+                autoresize_min_height: 500,
+                autoresize_bottom_margin: 50,
+content_style: ` 
+    body.mce-content-body { 
+        background: #2d2d2d; 
+        color: #d4d4d4; 
+        padding: 1rem 2rem !important; /* Adjust padding here */
+        line-height: 1.6;
+        font-size: 1.2em;
+		letter-spacing: 0.5px;
+    }
+
+    /* This rule is still needed to let text fill the space */
+    p, h1, h2, h3, h4, h5, h6 {
+        max-width: 100% !important;
+    }
+`,             setup: (ed) => {
+                    editor = ed;
+                    editor.on('init', onEditorReady);
+					
+					// --- ADD THIS BLOCK TO MANAGE HOTKEYS ---
+// TinyMCE automatically handles mapping 'ctrl' to 'Cmd' on macOS.
+
+// Save Chapter (Ctrl+S)
+editor.shortcuts.add('ctrl+s', 'Save Chapter', () => {
+    handleQuickSave();
+});
+
+// Quacksave All / Export Project (Ctrl+Q)
+editor.shortcuts.add('ctrl+q', 'Quacksave All (Export Project)', () => {
+    handleExportProject();
+});
+
+// Open / Import Project (Ctrl+O)
+editor.shortcuts.add('ctrl+o', 'Open (Import Project)', () => {
+    handleImportProject();
+});
+
+// Print Chapter (Ctrl+P)
+editor.shortcuts.add('ctrl+p', 'Print Chapter', () => {
+    handlePrint();
+});
+
+// Print All Chapters (Ctrl+Shift+P)
+editor.shortcuts.add('ctrl+shift+p', 'Print All Chapters', () => {
+    handlePrintAll();
+});
+// --- END OF HOTKEY BLOCK ---
+
+                    const keySounds = ['key-sound-1', 'key-sound-2', 'key-sound-3', 'key-sound-4'].map(id => document.getElementById(id));
+                    const returnSound = document.getElementById('return-sound');
+                    const spaceSound = document.getElementById('space-sound');
+                    
+                    editor.on('keydown', (event) => {
+					 // --- NEW: Handle exiting fullscreen with the Escape key ---
+    if (event.key === 'Escape' && document.fullscreenElement) {
+        event.preventDefault(); // Stop TinyMCE from doing anything else
+        document.exitFullscreen();
+        return; // We are done with this key press
+    }
+					
+					
+                        if (event.key === 'Enter') {
+                            playSound(returnSound);
+                            setTimeout(() => { editor.selection.getNode().scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 50);
+                        } else if (event.key === ' ') {
+                            playSound(spaceSound);
+                        } else if (event.key.length === 1 || event.key === 'Backspace' || event.key === 'Delete') {
+                            const soundToPlay = keySounds[Math.floor(Math.random() * keySounds.length)];
+                            playSound(soundToPlay);
+                        }
+                    });
+                }
+            });
+        }
+
+        /** * The main entry point for the application. 
+         */
+        async function initializeApp() {
+            if (typeof tinymce === 'undefined' || typeof TurndownService === 'undefined' || typeof marked === 'undefined') {
+                return alert('Fatal Error: A required library did not load. Please check your internet connection and refresh.');
+            }
+            
+            turndownService = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+            setupEditor();
+        }
+
+        // --- KICK IT OFF --- 
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+    })();
+</script>
+</body>
+</html> 
