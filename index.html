@@ -578,6 +578,21 @@
         // DOM Element References 
         const tabListEl = document.getElementById('tab-list');
 
+// Check if the browser supports service workers
+if ('serviceWorker' in navigator) {
+  // Register the service worker
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((reg) => {
+        console.log('Service Worker: Registered successfully');
+      })
+      .catch((err) => {
+        console.log('Service Worker: Registration failed: ', err);
+      });
+  });
+}
+
+	    
         // --- 2. CORE LOGIC (Data & State Management) --- 
 		
         /** * Creates a new tab object, adds it to the application state, and makes it active. 
@@ -1494,5 +1509,6 @@ editor.shortcuts.add('ctrl+shift+p', 'Print All Chapters', () => {
 </body>
 
 </html> 
+
 
 
