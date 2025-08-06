@@ -3,14 +3,14 @@ const CACHE_NAME = 'duck-writer-v1';
 const DUCK_FILES_TO_CACHE = [
   '/',
   '/index.html',
-  '/icons/duck192.png'
-  '/icons/duck512.png'
+  '/icons/duck192.png',
+  '/icons/duck512.png',
 
-  '/sounds/tp1.mp3'
- '/sounds/tp2.mp3'
- '/sounds/tp3.mp3'
- '/sounds/tp4.mp3'
- '/sounds/cr1.mp3'
+  '/sounds/tp1.mp3',
+ '/sounds/tp2.mp3',
+ '/sounds/tp3.mp3',
+ '/sounds/tp4.mp3',
+ '/sounds/cr1.mp3',
 '/sounds/sp2.mp3'
 ];
 
