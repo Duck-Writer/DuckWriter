@@ -1,7 +1,7 @@
 // Define a name for your cache and the files you want to save
 const CACHE_NAME = 'duck-writer-v1';
 const DUCK_FILES_TO_CACHE = [
-  '/',
+  '/Duckwriter/',
   '/index.html',
   '/icons/duck192.png'
   '/icons/duck512.png'
