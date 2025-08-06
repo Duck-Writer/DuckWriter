@@ -2,7 +2,7 @@
   "name": "DuckWriter",
   "short_name": "DuckWriter",
   "description": "Simple and elegant, like a duck.",
-  "start_url": "/",
+  "start_url": "/DuckWriter/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4A90E2",
