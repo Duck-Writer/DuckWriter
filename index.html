@@ -582,7 +582,7 @@
 if ('serviceWorker' in navigator) {
   // Register the service worker
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('/duckwriter/sw.js')
       .then((reg) => {
         console.log('Service Worker: Registered successfully');
       })
@@ -1509,6 +1509,7 @@ editor.shortcuts.add('ctrl+shift+p', 'Print All Chapters', () => {
 </body>
 
 </html> 
+
 
 
 
