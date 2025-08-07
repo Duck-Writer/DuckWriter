@@ -18,7 +18,9 @@
 
 
 const FILES_TO_CACHE = [
-    '/' 
+    '/' ,
+    '/icons/duck192.png',
+  '/icons/duck512.png',
     '/index.html'
 
 ];
