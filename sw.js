@@ -1,5 +1,5 @@
 const FILES_TO_CACHE = [
-    '/' 
+    '/DuckWriter/' 
 ];
 
 self.addEventListener('install', (event) => {
