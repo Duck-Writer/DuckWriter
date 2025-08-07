@@ -14,12 +14,26 @@
 //  '/sounds/sp2.mp3'
 //  ];
 
-// sw.js - an empty but valid service worker
+
+
+
+const FILES_TO_CACHE = [
+    '/' 
+    '/index.html'
+
+];
+
 self.addEventListener('install', (event) => {
-  console.log('Service Worker installed!');
+  event.waitUntil(
+    caches.open('duck-writer-v1').then((cache) => {
+      return cache.addAll(FILES_TO_CACHE);
+    })
+  );
 });
+
 
 self.addEventListener('fetch', (event) => {
   // For now, do nothing and let the request go to the network
   return;
 });
+
