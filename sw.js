@@ -5,8 +5,8 @@ const FILES_TO_CACHE = [
    
     '/DuckWriter/sounds/tp1.mp3',
     '/DuckWriter/sounds/tp2.mp3',
- //   '/DuckWriter/sounds/tp3.mp3',
-  //  '/DuckWriter/sounds/tp4.mp3',
+   '/DuckWriter/sounds/tp3.mp3',
+   '/DuckWriter/sounds/tp4.mp3',
  //   '/DuckWriter/sounds/cr1.mp3',
 //    '/DuckWriter/sounds/sp2.mp3',
      '/DuckWriter/icons/duck512.png'
