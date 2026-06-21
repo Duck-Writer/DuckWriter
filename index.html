@@ -79,8 +79,9 @@
 
         /* Right sidebar for tools and settings */
         #right-sidebar {
-            flex: 1; /* Allows this sidebar to grow and fill remaining space */
-            min-width: 320px;
+                 width: 260px;                /* Allows this sidebar to grow and fill remaining space              flex: 1; */
+           flex-shrink: 0;
+			/* min-width: 320px;*/
             border-left: 1px solid var(--bg-tertiary);
 
             background-color: var(--bg-secondary);
