@@ -354,16 +354,18 @@
         }
         
         /* --- 5. Editor & Stats --- */
-        .editor-wrapper {
-            flex-grow: 1;
-            position: relative;
-            overflow-y: auto;
-        }
-
-        .tox-tinymce {
-            border-radius: var(--border-radius) !important;
-            border: 3px solid var(--bg-tertiary) !important;
-        }
+        .editor-wrappe{
+    flex-grow: 1;
+    display: flex; /* Turns the wrapper into a flex container */
+    flex-direction: column;
+    overflow: hidden; /* Prevents double scrollbars; TinyMCE will handle its own scrolling */
+}
+.tox-tinymce {
+    flex-grow: 1 !important; /* Forces the outer editor box to stretch all the way down */
+    width: 100% !important;
+    border-radius: var(--border-radius) !important;
+    border: 3px solid var(--bg-tertiary) !important;
+}
         
         /* Word/character count display below the editor */
         #stats-display {
@@ -1396,6 +1398,16 @@ function generateProjectIdentifier() {
          */
         function setupEditor() {
             tinymce.init({
+
+// ... your other existing settings ...
+    
+    height: "100%", /* Tells the internal writing area to fill the stretched CSS container */
+    resize: false,  /* Removes the manual drag-to-resize handle at the bottom */
+    
+    // IMPORTANT: Look at your 'plugins:' array. 
+    // If "autoresize" is listed in there, you must delete it! 
+    // The autoresize plugin will override your 100% height setting.
+				
                 selector: '#editor',
                 promotion: false,
                 toolbar: false,
@@ -1404,8 +1416,8 @@ function generateProjectIdentifier() {
                 skin: 'oxide-dark',
                 content_css: 'dark',
                 plugins: 'autoresize',
-                autoresize_min_height: 500,
-                autoresize_bottom_margin: 50,
+           //     autoresize_min_height: 500,
+            //    autoresize_bottom_margin: 50,
 content_style: ` 
     body.mce-content-body { 
         background: #2d2d2d; 
