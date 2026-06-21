@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DuckWriter</title>
+    <title>DuckWriter</title>		
 	<link rel="manifest" href="manifest.json">
 
   <meta name="theme-color" content="#4A90E2">
@@ -394,6 +394,53 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+
+
+		/* --- Print Output Formatting --- */
+#print-zone {
+    display: none; 
+}
+
+@media print {
+    /* Hide the entire app UI */
+    body > *:not(#print-zone) {
+        display: none !important;
+    }
+
+    /* Set the page margins (replacing the iframe @page rule) */
+    @page {
+        margin: 0.75in; 
+    }
+
+    /* Force the tablet to treat the body as a white paper stack */
+    html, body {
+        background-color: white !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Format the text for a clean read */
+    #print-zone {
+        display: block !important;
+        /* Matches the font variables you had in the iframe */
+        font-family: var(--font-primary, 'Georgia', serif); 
+        font-size: 12pt;
+        line-height: 1.8; 
+        color: black !important;
+    }
+
+    /* Prevent awkward cuts across pages */
+    #print-zone p {
+        page-break-inside: avoid;
+    }
+    
+    /* Ensure combined chapters from handlePrintAll start on a fresh page */
+    #print-zone h3 {
+        page-break-before: always;
+        margin-top: 0;
+    }
+}
     </style>
 </head>
 <body>
@@ -1269,43 +1316,28 @@ async function handlePrintAll() {
 
     printContent(fullHtml, printTitle); // Pass the title to be printed
 }
-
-        /** * Creates a temporary, hidden iframe to print HTML content without altering the main page. 
-         * @param {string} htmlContent The HTML content string to be printed. 
-         */
+/** * Routes HTML content to the print zone and triggers the native print dialog. 
+ * @param {string} htmlContent The HTML content string to be printed. 
+ * @param {string} documentTitle The title for the printout/PDF file.
+ */
 function printContent(htmlContent, documentTitle = 'Print') {
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
+    const printZone = document.getElementById('print-zone');
     
-    const iframeDoc = iframe.contentWindow.document;
-    iframeDoc.open();
-    // We've added a <style> block to the <head> to control the print margins
-    iframeDoc.write(`
-        <html>
-            <head>
-                <title>${escapeHtml(documentTitle)}</title>
-                <style>
-                    @page {
-                        margin: 0.75in; /* Adjust this value for your desired print margin */
-                    }
-                    body {
-                        margin: 0;
-                        font-family: ${isPrimaryFont ? FONT_PRIMARY : FONT_SECONDARY}; 
-                        line-height: 1.8;
-                    }
-                </style>
-            </head>
-            <body>
-                ${htmlContent}
-            </body>
-        </html>
-    `);
-    iframeDoc.close();
+    // Save the original app title to restore it after printing
+    const originalTitle = document.title;
     
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-    document.body.removeChild(iframe);
+    // Set the document title so the PDF exports with the chapter/project name
+    document.title = documentTitle;
+
+    // Inject the content into the print zone
+    printZone.innerHTML = htmlContent;
+
+    // Trigger the tablet's native print dialog
+    window.print();
+
+    // Clean up: Restore the original title and empty the print zone
+    document.title = originalTitle;
+    printZone.innerHTML = '';
 }
         
         /** * Toggles the browser's fullscreen mode. 
